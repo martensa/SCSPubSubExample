@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: PubSubExampleApplication
+  sleuth:
+    otel:
+      config:
+        trace-id-ratio-based: 1.0
+      exporter:
+        otlp:
+          endpoint: http://192.168.100.140:4317
+  cloud:
+    function:
+      definition: timeEventSupplier;timeEventUpdater;timeEventConverter;timeEventConsumer
+    stream:
+      solace:
+        default:
+          consumer:
+            provisionDurableQueue: true
+            addDestinationAsSubscriptionToQueue: true
+      bindings:
+        timeEventSupplier-out-0:
+          destination: pub/timeEvent
+          binder: solace-broker
+        timeEventUpdater-in-0:
+          destination: pub/timeEvent
+          group: timeEventUpdaterGroup
+          contentType: application/json
+          binder: solace-broker
+        timeEventUpdater-out-0:
+          destination: pub/timeEvent/updated
+          binder: solace-broker
+        timeEventConverter-in-0:
+          destination: pub/timeEvent/updated
+          group: timeEventConverterGroup
+          contentType: application/json
+          binder: solace-broker
+        timeEventConverter-out-0:
+          destination: pub/timeEvent/converted/UTC
+          binder: solace-broker
+        timeEventConsumer-in-0:
+          destination: pub/timeEvent/converted/UTC
+          group: timeEventConsumerGroup
+          contentType: application/json
+          binder: solace-broker
+      binders:
+        solace-broker:
+          type: solace
+          environment:
+            solace:
+              java:
+                host: tcp://192.168.100.140:55557
+                msgVpn: default
+                clientUsername: default
+                clientPassword: default
+      poller:
+        fixed-delay: 1000
+logging:
+  level:
+    root: info
+    org:
+      springframework: info
+server:
+  port: 8090
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
